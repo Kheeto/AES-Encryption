@@ -18,7 +18,10 @@ namespace Encrypter_App
         public Form1()
         {
             InitializeComponent();
+            HandleNavigation(true, false, false);
         }
+
+        #region Button Handling
 
         private void encryptTextButton_Click(object sender, EventArgs e)
         {
@@ -39,6 +42,95 @@ namespace Encrypter_App
             }
             catch (Exception ex) { MessageBox.Show(ex.Message); }
         }
+
+        private void EncryptFileButton_Click(object sender, EventArgs e)
+        {
+            string content = ReadFileContent();
+            if (content == string.Empty) return;
+
+            try
+            {
+                string encrypted = EncryptText(content, encryptionKey.Text, IV);
+                encryptionResult.Text = encrypted;
+            }
+            catch (Exception ex) { MessageBox.Show(ex.Message); }
+        }
+
+        private void DecryptFileButton_Click(object sender, EventArgs e)
+        {
+            string content = ReadFileContent();
+            if (content == string.Empty) return;
+
+            try
+            {
+                string decrypted = DecryptText(content, decryptionKey.Text, IV);
+                decryptionResult.Text = decrypted;
+            }
+            catch (Exception ex) { MessageBox.Show(ex.Message); }
+        }
+
+        private void SaveEncryptedText_Click(object sender, EventArgs e)
+        {
+            SaveContentOnFile(encryptionResult.Text);
+        }
+
+        private void SaveDecryptedText_Click(object sender, EventArgs e)
+        {
+            SaveContentOnFile(decryptionResult.Text);
+        }
+
+        private void GenerateRandomKey_Click(object sender, EventArgs e)
+        {
+            randomKeyText.Text = RandomString(16);
+        }
+
+        private void navEncryption_Click(object sender, EventArgs e)
+        {
+            HandleNavigation(true, false, false);
+        }
+
+        private void navDecryption_Click(object sender, EventArgs e)
+        {
+            HandleNavigation(false, true, false);
+        }
+
+        private void navKeyGen_Click(object sender, EventArgs e)
+        {
+            HandleNavigation(false, false, true);
+        }
+
+        private void HandleNavigation(bool encryption, bool decryption, bool keyGeneration)
+        {
+            // Encryption
+            textBox3.Visible = encryption;
+            textBox7.Visible = encryption;
+            encryptionPlainText.Visible = encryption;
+            encryptionResult.Visible = encryption;
+            textBox2.Visible = encryption;
+            encryptionKey.Visible = encryption;
+            encryptTextButton.Visible = encryption;
+            encryptFileButton.Visible = encryption;
+            saveEncryptedText.Visible = encryption;
+
+            // Decryption
+            textBox4.Visible = decryption;
+            textBox8.Visible = decryption;
+            decryptionEncryptedText.Visible = decryption;
+            decryptionResult.Visible = decryption;
+            textBox5.Visible = decryption;
+            decryptionKey.Visible = decryption;
+            decryptTextButton.Visible = decryption;
+            decryptFileButton.Visible = decryption;
+            saveDecryptedText.Visible = decryption;
+
+            // Key Generation
+            textBox1.Visible = keyGeneration;
+            randomKeyText.Visible = keyGeneration;
+            generateRandomKey.Visible = keyGeneration;
+        }
+
+        #endregion
+        #region Encryption and Decryption
 
         private string EncryptText(string plainText, string password, byte[] IV)
         {
@@ -80,6 +172,9 @@ namespace Encrypter_App
             return UTF8Encoding.UTF8.GetString(Decrypted, 0, Decrypted.Length);
         }
 
+        #endregion
+        #region Window resize handling
+
         private Size oldSize;
         protected override void OnResize(System.EventArgs e)
         {
@@ -100,5 +195,88 @@ namespace Encrypter_App
             control.Top += (control.Top * height) / oldSize.Height;
             control.Height += (control.Height * height) / oldSize.Height;
         }
+
+        #endregion
+        #region Read and Saving to files
+
+        private string ReadFileContent()
+        {
+            var fileContent = string.Empty;
+            var filePath = string.Empty;
+
+            using (OpenFileDialog openFileDialog = new OpenFileDialog())
+            {
+                openFileDialog.InitialDirectory = "c:\\";
+                openFileDialog.Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*";
+                openFileDialog.FilterIndex = 2;
+                openFileDialog.RestoreDirectory = true;
+
+                if (openFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    //Get the path of specified file
+                    filePath = openFileDialog.FileName;
+
+                    //Read the contents of the file into a stream
+                    var fileStream = openFileDialog.OpenFile();
+
+                    using (StreamReader reader = new StreamReader(fileStream))
+                    {
+                        fileContent = reader.ReadToEnd();
+                    }
+                }
+            }
+
+            if (filePath == string.Empty) return string.Empty;
+            if (fileContent == string.Empty)
+            {
+                MessageBox.Show("Error: File is empty");
+                return string.Empty;
+            }
+
+            return fileContent;
+        }
+
+        public void SaveContentOnFile(string content)
+        {
+            if (content == null || content == string.Empty) return;
+
+            Stream myStream;
+            SaveFileDialog saveFileDialog = new SaveFileDialog();
+
+            saveFileDialog.Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*";
+            saveFileDialog.FilterIndex = 2;
+            saveFileDialog.RestoreDirectory = true;
+
+            if (saveFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                if ((myStream = saveFileDialog.OpenFile()) != null)
+                {
+                    byte[] bytes = Encoding.ASCII.GetBytes(content.ToCharArray());
+                    try
+                    {
+                        myStream.Write(bytes, 0, bytes.Length);
+                    }
+                    catch (Exception e) { MessageBox.Show(e.Message); }
+                    myStream.Close();
+                }
+            }
+        }
+
+        #endregion
+        #region Random key generation
+
+        private static Random random = new Random();
+        public static string RandomString(int length)
+        {
+            const string chars =
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
+                "abcdefghijklmnopqrstuvwxyz" +
+                "0123456789" +
+                ".,;:_-+*@#^?!/()=!?%$<>";
+            return new string(Enumerable.Repeat(chars, length)
+                .Select(s => s[random.Next(s.Length)]).ToArray());
+        }
+
+        #endregion
     }
 }
